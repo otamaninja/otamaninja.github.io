@@ -10,15 +10,10 @@
     <script>
       class SoundController {
         constructor() {
-          this.context = new AudioContext();
+          this.context = null; // AudioContext を初期化しない
           this.snd = null;
           this.gainNode = null;
-          this.selectableWaveformTypes = [
-            "sine",
-            "square",
-            "sawtooth",
-            "triangle",
-          ];
+          this.selectableWaveformTypes = ["sine", "square", "sawtooth", "triangle"];
           this.waveformType = "sine"; // 初期値
           this.baseFrequency = 100; // 最低周波数
           this.frequencyStep = 100; // 周波数の調整幅
@@ -26,11 +21,20 @@
           this.createFrequencyDisplay();
         }
 
+        // 初回タッチ時に AudioContext を作成する
+        initAudioContext() {
+          if (!this.context) {
+            this.context = new (window.AudioContext || window.webkitAudioContext)();
+          }
+        }
+
         getNoteAndDremi(frequency) {
           return `Freq: ${frequency.toFixed(0)} Hz`;
         }
 
         playSin(freq) {
+          this.initAudioContext(); // 初回のタッチで AudioContext を作成
+
           if (this.snd) return;
           this.snd = this.context.createOscillator();
           this.snd.type = this.waveformType;
@@ -47,10 +51,7 @@
         stopSin() {
           if (this.snd) {
             this.gainNode.gain.setValueAtTime(1, this.context.currentTime);
-            this.gainNode.gain.linearRampToValueAtTime(
-              0,
-              this.context.currentTime + 0.3
-            );
+            this.gainNode.gain.linearRampToValueAtTime(0, this.context.currentTime + 0.3);
             setTimeout(() => this.snd.stop(), 300);
             this.snd = null;
           }
@@ -126,10 +127,7 @@
           decreaseButton.style.borderRadius = "0.5em";
           decreaseButton.style.cursor = "pointer";
           decreaseButton.addEventListener("click", () => {
-            this.baseFrequency = Math.max(
-              100,
-              this.baseFrequency - this.frequencyStep
-            );
+            this.baseFrequency = Math.max(100, this.baseFrequency - this.frequencyStep);
             freqInput.value = this.baseFrequency;
           });
           buttonContainer.appendChild(decreaseButton);
@@ -182,7 +180,7 @@
         createFrequencyDisplay() {
           this.freqDisplay = document.createElement("div");
           this.freqDisplay.style.position = "absolute";
-          this.freqDisplay.style.left = "1em"; // 左寄せ
+          this.freqDisplay.style.left = "1em";
           this.freqDisplay.style.top = "1em";
           this.freqDisplay.style.color = "#FFF";
           this.freqDisplay.style.backgroundColor = "rgba(0, 0, 0, 0.7)";
