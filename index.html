@@ -1,90 +1,204 @@
-<!DOCTYPE html>
 <html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Progate</title>
-  <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
-  <link rel="stylesheet" type="text/css" href="stylesheet.css">
-</head>
-<body>
-  <header>
-    <div class="container">
-      <div class="header-left">
-        <img class="logo" src="https://prog-8.com/images/html/advanced/main_logo.png">
-      </div>
-      <span class="fa fa-bars menu-icon"></span>
-      <div class="header-right">
-        <a href="#">レッスン</a>
-        <a href="#">新規登録</a>
-        <a href="#" class="login">ログイン</a>
-      </div>
-    </div>
-  </header>
-  <div class="top-wrapper">
-    <div class="container">
-      <h1>LEARN TO CODE.<br>LEARN TO BE CREATIVE.</h1>
-      <p>Progateはオンラインプログラミング学習サービスです。<br>初心者にもやさしいスライドとレッスンで、ウェブサービスを作りながらプログラミングを学んでいきましょう。</p>
-      <div class="btn-wrapper">
-        <a href="#" class="btn signup">新規登録はこちら</a>
-        <p>or</p>
-        <a href="#" class="btn facebook"><span class="fa fa-facebook"></span>Facebookで登録</a>
-        <a href="#" class="btn twitter"><span class="fa fa-twitter"></span>Twitterで登録</a>
-      </div>
-    </div>
-  </div>
-  <div class="lesson-wrapper">
-    <div class="container">
-      <div class="heading">
-        <h2>Learn Where to Get Started!</h2>
-      </div>
-      <div class="lessons">
-        <div class="lesson">
-          <div class="lesson-icon">
-            <img src="https://prog-8.com/images/html/advanced/html.png">
-            <p>HTML & CSS</p>
-          </div>
-          <p class="text-contents">ウェブページの作成に使用される言語です。HTMLとCSSを組み合わせることで、静的なページを作り上げることができます。</p>
-        </div>
-        <div class="lesson">
-          <div class="lesson-icon">
-            <img src="https://prog-8.com/images/html/advanced/jQuery.png">
-            <p>jQuery</p>
-          </div>
-          <p class="text-contents">素敵な動きを手軽に実装できるJavaScriptライブラリです。 アニメーション効果をつけたり、Ajax（エイジャックス）を使って外部ファイルを読み込んだりと色々なことができます。</p>
-        </div>
-        <div class="lesson">
-          <div class="lesson-icon">
-            <img src="https://prog-8.com/images/html/advanced/ruby.png">
-            <p>Ruby</p>
-          </div>
-          <p class="text-contents">オープンソースの動的なプログラミング言語で、 シンプルさと高い生産性を備えています。大きなWebアプリケーションから小さな日用ツールまで、さまざまなソフトウェアを作ることができます。</p>
-        </div>
-        <div class="lesson">
-          <div class="lesson-icon">
-            <img src="https://prog-8.com/images/html/advanced/php.png">
-            <p>PHP</p>
-          </div>
-          <p class="text-contents">HTMLだけではページの内容を変えることはできません。PHPはHTMLにプログラムを埋め込み、それを可能にします。</p>
-        </div>
-      </div>
-      <div class="clear"></div>
-    </div>
-  </div>
-  <div class="message-wrapper">
-    <div class="container">
-      <div class="heading">
-        <h2>さぁ、あなたもProgateでプログラミングを学んでみませんか?</h2>
-        <h3>Let's learn to code, learn to be creative!</h3>
-      </div>
-      <span class="btn message">さっそく開発する</span>
-    </div>
-  </div>
-  <footer>
-    <div class="container">
-      <img src="https://prog-8.com/images/html/advanced/footer_logo.png">
-      <p>Learn to Code, Learn to be Creative.</p>
-    </div>
-  </footer>
-</body>
+  <head>
+    <title>Sound Slider</title>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+  </head>
+  <body>
+    <script>
+      class SoundController {
+        constructor() {
+          this.context = new AudioContext();
+          this.snd = null;
+          this.gainNode = null;
+          this.selectableWaveformTypes = [
+            "sine",
+            "square",
+            "sawtooth",
+            "triangle",
+          ];
+          this.waveformType = "sine"; // 初期値
+          this.baseFrequency = 100; // 最低周波数
+          this.frequencyStep = 100; // 周波数の調整幅
+          this.createUI();
+          this.createFrequencyDisplay();
+        }
+
+        getNoteAndDremi(frequency) {
+          return `Freq: ${frequency.toFixed(0)} Hz`;
+        }
+
+        playSin(freq) {
+          if (this.snd) return;
+          this.snd = this.context.createOscillator();
+          this.snd.type = this.waveformType;
+          this.snd.frequency.value = freq;
+
+          this.gainNode = this.context.createGain();
+          this.gainNode.gain.setValueAtTime(1, this.context.currentTime);
+          this.gainNode.connect(this.context.destination);
+
+          this.snd.connect(this.gainNode);
+          this.snd.start();
+        }
+
+        stopSin() {
+          if (this.snd) {
+            this.gainNode.gain.setValueAtTime(1, this.context.currentTime);
+            this.gainNode.gain.linearRampToValueAtTime(
+              0,
+              this.context.currentTime + 0.3
+            );
+            setTimeout(() => this.snd.stop(), 300);
+            this.snd = null;
+          }
+        }
+
+        createUI() {
+          // サウンドバー（右端固定）
+          const soundSlider = document.createElement("div");
+          soundSlider.style.position = "fixed";
+          soundSlider.style.right = "0";
+          soundSlider.style.top = "0";
+          soundSlider.style.width = "3.5em";
+          soundSlider.style.height = "100vh";
+          soundSlider.style.background = "#333";
+
+          soundSlider.addEventListener("touchstart", (e) => {
+            const y = e.touches[0].pageY;
+            this.playSin(this.baseFrequency + y);
+            this.updateFrequencyDisplay(
+              e.touches[0].pageX,
+              e.touches[0].pageY,
+              this.baseFrequency + y
+            );
+          });
+
+          soundSlider.addEventListener("touchmove", (e) => {
+            const y = e.touches[0].pageY;
+            if (this.snd) {
+              this.snd.frequency.value = this.baseFrequency + y;
+              this.updateFrequencyDisplay(
+                e.touches[0].pageX,
+                e.touches[0].pageY,
+                this.baseFrequency + y
+              );
+            }
+          });
+
+          soundSlider.addEventListener("touchend", () => {
+            this.stopSin();
+            this.freqDisplay.style.visibility = "hidden";
+          });
+
+          document.body.append(soundSlider);
+
+          // コントロールUI（左端固定）
+          const controlContainer = document.createElement("div");
+          controlContainer.style.position = "fixed";
+          controlContainer.style.left = "1em";
+          controlContainer.style.top = "50%";
+          controlContainer.style.transform = "translateY(-50%)";
+          controlContainer.style.display = "flex";
+          controlContainer.style.flexDirection = "column";
+          controlContainer.style.alignItems = "center";
+          controlContainer.style.backgroundColor = "#333";
+          controlContainer.style.color = "#FFF";
+          controlContainer.style.padding = "1em";
+          controlContainer.style.borderRadius = "1em";
+
+          // プラス、マイナスボタン
+          const buttonContainer = document.createElement("div");
+          buttonContainer.style.display = "flex";
+          buttonContainer.style.flexDirection = "column";
+          buttonContainer.style.gap = "1em";
+          buttonContainer.style.marginTop = "1em";
+
+          const decreaseButton = document.createElement("button");
+          decreaseButton.innerText = "−";
+          decreaseButton.style.padding = ".2em 1em";
+          decreaseButton.style.fontSize = "3em";
+          decreaseButton.style.backgroundColor = "#FF6347";
+          decreaseButton.style.color = "#FFF";
+          decreaseButton.style.border = "none";
+          decreaseButton.style.borderRadius = "0.5em";
+          decreaseButton.style.cursor = "pointer";
+          decreaseButton.addEventListener("click", () => {
+            this.baseFrequency = Math.max(
+              100,
+              this.baseFrequency - this.frequencyStep
+            );
+            freqInput.value = this.baseFrequency;
+          });
+          buttonContainer.appendChild(decreaseButton);
+
+          const increaseButton = document.createElement("button");
+          increaseButton.innerText = "+";
+          increaseButton.style.padding = ".2em 1em";
+          increaseButton.style.fontSize = "3em";
+          increaseButton.style.backgroundColor = "#4CAF50";
+          increaseButton.style.color = "#FFF";
+          increaseButton.style.border = "none";
+          increaseButton.style.borderRadius = "0.5em";
+          increaseButton.style.cursor = "pointer";
+          increaseButton.addEventListener("click", () => {
+            this.baseFrequency += this.frequencyStep;
+            freqInput.value = this.baseFrequency;
+          });
+          buttonContainer.appendChild(increaseButton);
+
+          controlContainer.appendChild(buttonContainer);
+
+          // 周波数入力
+          const freqInput = document.createElement("input");
+          freqInput.type = "number";
+          freqInput.value = this.baseFrequency;
+          freqInput.style.width = "6em";
+          freqInput.style.margin = "0.5em";
+          freqInput.style.textAlign = "center";
+          freqInput.addEventListener("input", (e) => {
+            this.baseFrequency = parseInt(e.target.value) || 100;
+          });
+          controlContainer.appendChild(freqInput);
+
+          // 波形選択
+          const waveformSelect = document.createElement("select");
+          this.selectableWaveformTypes.forEach((type) => {
+            const option = document.createElement("option");
+            option.value = type;
+            option.text = type;
+            waveformSelect.appendChild(option);
+          });
+          waveformSelect.addEventListener("change", (e) => {
+            this.waveformType = e.target.value;
+          });
+          controlContainer.appendChild(waveformSelect);
+
+          document.body.append(controlContainer);
+        }
+
+        createFrequencyDisplay() {
+          this.freqDisplay = document.createElement("div");
+          this.freqDisplay.style.position = "absolute";
+          this.freqDisplay.style.left = "1em"; // 左寄せ
+          this.freqDisplay.style.top = "1em";
+          this.freqDisplay.style.color = "#FFF";
+          this.freqDisplay.style.backgroundColor = "rgba(0, 0, 0, 0.7)";
+          this.freqDisplay.style.padding = "0.5em";
+          this.freqDisplay.style.borderRadius = "0.5em";
+          this.freqDisplay.style.visibility = "hidden";
+          document.body.append(this.freqDisplay);
+        }
+
+        updateFrequencyDisplay(x, y, freq) {
+          this.freqDisplay.innerText = this.getNoteAndDremi(freq);
+          this.freqDisplay.style.visibility = "visible";
+        }
+      }
+
+      new SoundController();
+    </script>
+  </body>
 </html>
