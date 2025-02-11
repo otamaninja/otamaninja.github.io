@@ -36,9 +36,10 @@
               this.snds = [];
               this.gainNode = null;
               this.waveformType = "sine";
-              //this.baseFrequency = 153;
               this.freqMidHigh = 1046.50; // C5
               this.freqMidLow = 130.81; // C3
+              this.frequencyRange = {LOW: "LOW", MID: "MID", HIGH: "HIGH"};
+              this.currentRange = "MID";              
               this.sliderPosition = "Left"; // 初期位置を左に設定
               this.createUI();
               this.createFrequencyDisplay();
@@ -71,6 +72,47 @@
 
               document.body.append(this.positionButton);
 
+              this.frequencySelector = document.createElement('div');
+              this.frequencySelector.style.position = "fixed";
+              this.frequencySelector.style.bottom = "60px";
+              this.frequencySelector.style.right = "2em";
+              this.frequencySelector.style.backgroundColor = "rgba(255, 255, 255, 0.8)";
+              this.frequencySelector.style.padding = "10px";
+              this.frequencySelector.style.borderRadius = "5px";
+
+              ["LOW", "MID", "HIGH"].forEach(level => {
+                  const label = document.createElement('label');
+                  const radio = document.createElement('input');
+                  radio.type = "radio";
+                  radio.name = "frequency";
+                  radio.value = level;
+                  radio.checked = this.currentRange === level;
+                  radio.addEventListener("change", () => {
+                      this.currentRange = level;
+                      switch(this.currentRange){
+	              case "LOW": // 
+			  this.freqMidHigh = 261.63; // C4
+			  this.freqMidLow = 32.70; // C1
+	                  break;
+	              case "HIGH":
+			  this.freqMidHigh = 4186.01; // C8
+			  this.freqMidLow = 523.25; // C5
+	                  break;
+	              default:
+			  this.freqMidHigh = 1046.50; // C6
+			  this.freqMidLow = 130.81; // C3
+	 	          break;                      	
+                      }
+                  });
+
+                  label.appendChild(radio);
+                  label.appendChild(document.createTextNode(level));
+                  this.frequencySelector.appendChild(label);
+                  this.frequencySelector.appendChild(document.createElement('br'));
+              });
+
+              document.body.append(this.frequencySelector);
+
 
               this.updateSliderPosition(); // ここでスライダーの位置を適用
 
@@ -78,7 +120,7 @@
                   const y = e.touches[0].pageY;
                   const height = window.innerHeight || document.documentElement.clientHeight; // 修正
                   //const freq = Math.max(this.freqMidLow, Math.min(this.freqMidHigh, this.freqMidLow + (y / height * (this.freqMidHigh - this.freqMidLow))));
-                  const freq = Math.max(this.freqMidLow, Math.min(this.freqMidHigh, this.freqMidLow + ((y / height - 0.06) * (this.freqMidHigh - this.freqMidLow) / 0.90)));
+                  const freq = Math.max(this.freqMidLow, Math.min(this.freqMidHigh, this.freqMidLow + ((y / height - 0.06) * (this.freqMidHigh - this.freqMidLow) / 0.80)));
                   this.playSin(freq);
                   this.updateFrequencyDisplay(e.touches[0].pageX, e.touches[0].pageY, freq, height);
               });
@@ -86,7 +128,7 @@
                   const y = e.touches[0].pageY;
                   const height = window.innerHeight || document.documentElement.clientHeight;
                   if (this.snd) {
-                      const freq = Math.max(this.freqMidLow, Math.min(this.freqMidHigh, this.freqMidLow + ((y / height - 0.06) * (this.freqMidHigh - this.freqMidLow) / 0.90)));
+                      const freq = Math.max(this.freqMidLow, Math.min(this.freqMidHigh, this.freqMidLow + ((y / height - 0.06) * (this.freqMidHigh - this.freqMidLow) / 0.80)));
                       this.snd.frequency.value = freq;
                       this.updateFrequencyDisplay(e.touches[0].pageX, e.touches[0].pageY, freq, height);
                   }
@@ -104,11 +146,15 @@
                   this.soundSlider.style.right = "";
                   this.positionButton.style.right = "2em";
                   this.positionButton.style.left = "";
+                  this.frequencySelector.style.right = "2em";
+                  this.frequencySelector.style.left = "";
               } else {
                   this.soundSlider.style.right = "2em";
                   this.soundSlider.style.left = "";
                   this.positionButton.style.right = "";
                   this.positionButton.style.left = "2em";
+                  this.frequencySelector.style.left = "2em";
+                  this.frequencySelector.style.right = "";
               }
           }
 
