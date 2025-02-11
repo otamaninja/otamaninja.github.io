@@ -31,13 +31,46 @@
           background: black;
           position: fixed;
           bottom: 50px;
-          left: 40%;
+          left: 60%;
           transform: translateX(-50%);
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
           border-radius: 10px;
+      }
+      .tail-container {
+          position: fixed;
+          top: 20px;
+          left: 10%;
+          transform-origin: left center;
+          transition: transform 0.5s ease-in-out;
+      }
+      .tail {
+          width: 200px;
+          height: 50px;
+          background: black;
+          border-radius: 30px;
+          transform-origin: left center;
+          animation: wag 1s infinite alternate ease-in-out;
+      }
+      .tail-end {
+          width: 80px;
+          height: 80px;
+          background: black;
+          position: absolute;
+          bottom: -40px;
+          right: 0px;
+          left: "";
+          border-radius: 30px;
+      }
+      @keyframes wag {
+          0% {
+              transform: rotate(-10deg);
+          }
+          100% {
+              transform: rotate(10deg);
+          }
       }
       .eyes {
           display: flex;
@@ -66,14 +99,18 @@
   </head>
 
   <body>
-    <div class="face">
+    <div class="face" id="face">
       <div class="eyes">
         <div class="eye"></div>
         <div class="eye"></div>
       </div>
       <div class="mouth" id="mouth"></div>
     </div>
-  
+    <div class="tail-container" id="tail-container">
+      <div class="tail" id="tail">
+        <div class="tail-end"></div>
+      </div>
+    </div>
     <script>
       class SoundController {
           constructor() {
@@ -87,6 +124,8 @@
               this.currentRange = "MID";              
               this.sliderPosition = "Left"; // 初期位置を左に設定
               this.mouth = document.getElementById("mouth");
+              this.face = document.getElementById("face");
+              this.tailContainer = document.getElementById("tail-container");
               this.createUI();
               this.createFrequencyDisplay();
           }
@@ -194,6 +233,9 @@
                   this.positionButton.style.left = "";
                   this.frequencySelector.style.right = "2em";
                   this.frequencySelector.style.left = "";
+                  this.face.style.left = "40%";
+                  this.tailContainer.style.left = "10%";
+                  this.tailContainer.style.transform = "scaleX(1)";
               } else {
                   this.soundSlider.style.right = "2em";
                   this.soundSlider.style.left = "";
@@ -201,6 +243,9 @@
                   this.positionButton.style.left = "2em";
                   this.frequencySelector.style.left = "2em";
                   this.frequencySelector.style.right = "";
+                  this.face.style.left = "60%";
+                  this.tailContainer.style.left = "90%";
+                  this.tailContainer.style.transform = "scaleX(-1)";
               }
           }
 
@@ -248,20 +293,20 @@
               }
           }
           /*
-            updateFrequencyDisplay(x, y, freq) {
-            this.freqDisplay.style.left = `6rem`;
-            this.freqDisplay.style.top = `${y}px`;
-            this.freqDisplay.innerText = `Freq: ${freq.toFixed(0)} Hz, x: ${x], y: ${y}`;
-            this.freqDisplay.style.visibility = "visible";
-            }
-            }
-          */
           updateFrequencyDisplay(x, y, freq, height) {
               this.freqDisplay.style.left = `6rem`;
               this.freqDisplay.style.top = `(${y} - 10)px`;
               this.freqDisplay.innerText = `Freq: ${freq.toFixed(0)} Hz, x: ${x}, y: ${y}, height: ${height}`;
               this.freqDisplay.style.visibility = "visible";
           }
+          */
+          updateFrequencyDisplay(x, y, freq, height) {
+              this.freqDisplay.style.left = `6rem`;
+              this.freqDisplay.style.top = `0px`;
+              this.freqDisplay.innerText = `Freq: ${freq.toFixed(0)} Hz`;
+              this.freqDisplay.style.visibility = "visible";
+          }          
+          
       }
       document.body.style.background = "#CCC";
       const soundController = new SoundController();
