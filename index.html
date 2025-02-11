@@ -4,6 +4,28 @@
   <head>
     <title>Sound Slider</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <style>
+      .soundSlider {
+          width: 3.5em;
+          height: 100vh;
+          background: #333;
+          position: fixed;
+      }
+      .soundSlider::before, .soundSlider::after {
+          content: "";
+          position: absolute;
+          left: 0;
+          width: 100%;
+          height: 2px;
+          background: white;
+      }
+      .soundSlider::before {
+          top: 4%;
+      }
+      .soundSlider::after {
+          bottom: 5%;
+      }
+    </style>
   </head>
 
   <body>
@@ -14,7 +36,9 @@
               this.snds = [];
               this.gainNode = null;
               this.waveformType = "sine";
-              this.baseFrequency = 153;
+              //this.baseFrequency = 153;
+              this.freqMidHigh = 1046.50; // C5
+              this.freqMidLow = 130.81; // C3
               this.sliderPosition = "Left"; // 初期位置を左に設定
               this.createUI();
               this.createFrequencyDisplay();
@@ -24,18 +48,37 @@
               document.body.style.overflow = "hidden";
 
               this.soundSlider = document.createElement('div');
-              this.soundSlider.style.width = "3.5em";
-              this.soundSlider.style.height = "100vh";
-              this.soundSlider.style.background = "#333";
-              this.soundSlider.style.position = "fixed"; // 絶対位置指定
-
+              this.soundSlider.classList.add('soundSlider');
               document.body.append(this.soundSlider);
+
+              this.positionButton = document.createElement('button');
+              this.positionButton.innerText = "Toggle";
+              this.positionButton.style.position = "fixed";
+              this.positionButton.style.bottom = "10px";
+              this.positionButton.style.right = "2em";
+              this.positionButton.style.left = "";
+              this.positionButton.style.padding = "10px 20px";
+              this.positionButton.style.fontSize = "1.2em";
+              this.positionButton.style.backgroundColor = "#007BFF";
+              this.positionButton.style.color = "#FFF";
+              this.positionButton.style.border = "none";
+              this.positionButton.style.borderRadius = "5px";
+              this.positionButton.style.cursor = "pointer";
+              this.positionButton.addEventListener("click", () => {
+                  this.sliderPosition = this.sliderPosition === "Left" ? "Right" : "Left";
+                  this.updateSliderPosition();
+              });
+
+              document.body.append(this.positionButton);
+
+
               this.updateSliderPosition(); // ここでスライダーの位置を適用
 
               this.soundSlider.addEventListener("touchstart", (e) => {
                   const y = e.touches[0].pageY;
                   const height = window.innerHeight || document.documentElement.clientHeight; // 修正
-                  const freq = Math.max(130, Math.min(1050, this.baseFrequency + (y / height * (1050 - 130))));
+                  //const freq = Math.max(this.freqMidLow, Math.min(this.freqMidHigh, this.freqMidLow + (y / height * (this.freqMidHigh - this.freqMidLow))));
+                  const freq = Math.max(this.freqMidLow, Math.min(this.freqMidHigh, this.freqMidLow + ((y / height - 0.06) * (this.freqMidHigh - this.freqMidLow) / 0.90)));
                   this.playSin(freq);
                   this.updateFrequencyDisplay(e.touches[0].pageX, e.touches[0].pageY, freq, height);
               });
@@ -43,7 +86,7 @@
                   const y = e.touches[0].pageY;
                   const height = window.innerHeight || document.documentElement.clientHeight;
                   if (this.snd) {
-                      const freq = Math.max(130, Math.min(1050, this.baseFrequency + (y / height * (1050 - 130))));
+                      const freq = Math.max(this.freqMidLow, Math.min(this.freqMidHigh, this.freqMidLow + ((y / height - 0.06) * (this.freqMidHigh - this.freqMidLow) / 0.90)));
                       this.snd.frequency.value = freq;
                       this.updateFrequencyDisplay(e.touches[0].pageX, e.touches[0].pageY, freq, height);
                   }
@@ -53,34 +96,19 @@
                   this.stopSin();
                   this.freqDisplay.style.visibility = "hidden";
               });
-
-              const positionButton = document.createElement('button');
-              positionButton.innerText = "Toggle Left/Right";
-              positionButton.style.position = "fixed";
-              positionButton.style.bottom = "10px";
-              positionButton.style.right = "10px";
-              positionButton.style.padding = "10px 20px";
-              positionButton.style.fontSize = "1.2em";
-              positionButton.style.backgroundColor = "#007BFF";
-              positionButton.style.color = "#FFF";
-              positionButton.style.border = "none";
-              positionButton.style.borderRadius = "5px";
-              positionButton.style.cursor = "pointer";
-              positionButton.addEventListener("click", () => {
-                  this.sliderPosition = this.sliderPosition === "Left" ? "Right" : "Left";
-                  this.updateSliderPosition();
-              });
-
-              document.body.append(positionButton);
           }
 
           updateSliderPosition() {
               if (this.sliderPosition === "Left") {
                   this.soundSlider.style.left = "2em";
                   this.soundSlider.style.right = "";
+                  this.positionButton.style.right = "2em";
+                  this.positionButton.style.left = "";
               } else {
                   this.soundSlider.style.right = "2em";
                   this.soundSlider.style.left = "";
+                  this.positionButton.style.right = "";
+                  this.positionButton.style.left = "2em";
               }
           }
 
@@ -133,7 +161,7 @@
           */
           updateFrequencyDisplay(x, y, freq, height) {
               this.freqDisplay.style.left = `6rem`;
-              this.freqDisplay.style.top = `${y}px`;
+              this.freqDisplay.style.top = `(${y} - 10)px`;
               this.freqDisplay.innerText = `Freq: ${freq.toFixed(0)} Hz, x: ${x}, y: ${y}, height: ${height}`;
               this.freqDisplay.style.visibility = "visible";
           }
