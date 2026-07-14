@@ -12,7 +12,12 @@
           height: 100%;
           width: 100%;
           position: fixed;
-          background: #CCC;
+          background-color: #CCC;
+          background-size: cover;
+          background-position: center;
+          background-repeat: no-repeat;
+          --body-color: #000000;
+          --detail-color: #FFFFFF;
       }
 
       #stage {
@@ -25,7 +30,7 @@
       .soundSlider {
           width: 56px;
           height: 800px;
-          background: #333;
+          background: var(--body-color);
           position: absolute;
           top: 0;
           left: 0;
@@ -37,7 +42,7 @@
           left: 0;
           width: 100%;
           height: 2px;
-          background: white;
+          background: var(--detail-color);
       }
       .soundSlider::before {
           top: 4%;
@@ -46,18 +51,20 @@
           bottom: 15%;
       }
       .face {
-          width: 150px;
-          height: 150px;
-          background: black;
+          width: 190px;
+          height: 190px;
+          background: var(--body-color);
+          border: 2px solid rgba(0,0,0,0.15);
+          box-sizing: border-box;
           position: absolute;
           bottom: 50px;
-          left: 30%;
+          left: 34%;
           transform: translateX(-50%);
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          border-radius: 10px;
+          border-radius: 50%;
       }
       .tail-container {
           position: absolute;
@@ -68,7 +75,9 @@
       .tail {
           width: 200px;
           height: 50px;
-          background: black;
+          background: var(--body-color);
+          border: 2px solid rgba(0,0,0,0.15);
+          box-sizing: border-box;
           border-radius: 30px;
           transform-origin: left center;
           animation: wag 1s infinite alternate ease-in-out;
@@ -76,7 +85,9 @@
       .tail-end {
           width: 80px;
           height: 80px;
-          background: black;
+          background: var(--body-color);
+          border: 2px solid rgba(0,0,0,0.15);
+          box-sizing: border-box;
           position: absolute;
           bottom: -40px;
           right: 0px;
@@ -94,17 +105,18 @@
           display: flex;
           justify-content: space-between;
           width: 60%;
+          margin-bottom: 12px;
       }
       .eye {
           width: 20px;
           height: 20px;
-          background: white;
+          background: var(--detail-color);
           border-radius: 50%;
       }
       .mouth {
-          width: 60px;
+          width: 100px;
           height: 10px;
-          background: white;
+          background: var(--detail-color);
           margin-top: 10px;
           transition: height 0.3s ease-in-out;
       }
@@ -231,6 +243,117 @@
 
               document.body.append(this.frequencySelector);
 
+              this.colorSelector = document.createElement('div');
+              this.colorSelector.style.position = "fixed";
+              this.colorSelector.style.bottom = "220px";
+              this.colorSelector.style.right = "2em";
+              this.colorSelector.style.backgroundColor = "rgba(255, 255, 255, 0.8)";
+              this.colorSelector.style.padding = "10px";
+              this.colorSelector.style.borderRadius = "5px";
+              this.colorSelector.style.zIndex = "10";
+
+              const colorOptions = [
+                  { label: "Black", body: "#000000", detail: "#FFFFFF" },
+                  { label: "White", body: "#FFFFFF", detail: "#333333" },
+                  { label: "Pink", body: "#FFD1DC", detail: "#333333" },
+                  { label: "Blue", body: "#BEE3F8", detail: "#333333" }
+              ];
+
+              colorOptions.forEach(opt => {
+                  const label = document.createElement('label');
+                  const radio = document.createElement('input');
+                  radio.type = "radio";
+                  radio.name = "bodyColor";
+                  radio.value = opt.label;
+                  radio.checked = opt.label === "Black";
+                  radio.addEventListener("change", () => {
+                      document.body.style.setProperty("--body-color", opt.body);
+                      document.body.style.setProperty("--detail-color", opt.detail);
+                  });
+
+                  label.appendChild(radio);
+                  label.appendChild(document.createTextNode(opt.label));
+                  this.colorSelector.appendChild(label);
+                  this.colorSelector.appendChild(document.createElement('br'));
+              });
+
+              document.body.append(this.colorSelector);
+
+              this.bgSelector = document.createElement('div');
+              this.bgSelector.style.position = "fixed";
+              this.bgSelector.style.top = "10px";
+              this.bgSelector.style.right = "1em";
+              this.bgSelector.style.backgroundColor = "rgba(255, 255, 255, 0.8)";
+              this.bgSelector.style.padding = "10px";
+              this.bgSelector.style.borderRadius = "5px";
+              this.bgSelector.style.zIndex = "10";
+              this.bgSelector.style.maxWidth = "9em";
+
+              const bgTitle = document.createElement('div');
+              bgTitle.innerText = "Background";
+              bgTitle.style.fontWeight = "bold";
+              bgTitle.style.marginBottom = "4px";
+              this.bgSelector.appendChild(bgTitle);
+
+              const bgColorOptions = [
+                  { label: "Gray", color: "#CCCCCC" },
+                  { label: "Cream", color: "#FDF6E3" },
+                  { label: "Mint", color: "#E0F5E9" },
+                  { label: "Lavender", color: "#EDE7F6" },
+                  { label: "Peach", color: "#FFE8DC" }
+              ];
+
+              bgColorOptions.forEach(opt => {
+                  const label = document.createElement('label');
+                  const radio = document.createElement('input');
+                  radio.type = "radio";
+                  radio.name = "bgColor";
+                  radio.value = opt.label;
+                  radio.checked = opt.label === "Gray";
+                  radio.addEventListener("change", () => {
+                      document.body.style.backgroundImage = "";
+                      document.body.style.backgroundColor = opt.color;
+                  });
+
+                  label.appendChild(radio);
+                  label.appendChild(document.createTextNode(opt.label));
+                  this.bgSelector.appendChild(label);
+                  this.bgSelector.appendChild(document.createElement('br'));
+              });
+
+              const bgImageLabel = document.createElement('label');
+              bgImageLabel.innerText = "Photo: ";
+              bgImageLabel.style.display = "block";
+              bgImageLabel.style.marginTop = "6px";
+              const bgImageInput = document.createElement('input');
+              bgImageInput.type = "file";
+              bgImageInput.accept = "image/*";
+              bgImageInput.style.width = "8em";
+              bgImageInput.style.fontSize = "0.7em";
+              bgImageInput.addEventListener("change", (e) => {
+                  const file = e.target.files[0];
+                  if (file) {
+                      const url = URL.createObjectURL(file);
+                      document.body.style.backgroundImage = `url("${url}")`;
+                      console.log("Background image set:", url);
+                  }
+              });
+              bgImageLabel.appendChild(bgImageInput);
+              this.bgSelector.appendChild(bgImageLabel);
+
+              const bgClearButton = document.createElement('button');
+              bgClearButton.innerText = "Clear photo";
+              bgClearButton.style.marginTop = "6px";
+              bgClearButton.style.fontSize = "0.7em";
+              bgClearButton.style.width = "100%";
+              bgClearButton.addEventListener("click", () => {
+                  document.body.style.backgroundImage = "";
+                  bgImageInput.value = "";
+              });
+              this.bgSelector.appendChild(bgClearButton);
+
+              document.body.append(this.bgSelector);
+
               this.updateMirror();
 
               this.soundSlider.addEventListener("pointerdown", (e) => {
@@ -273,11 +396,19 @@
                   this.positionButton.style.left = "";
                   this.frequencySelector.style.right = "2em";
                   this.frequencySelector.style.left = "";
+                  this.colorSelector.style.right = "2em";
+                  this.colorSelector.style.left = "";
+                  this.bgSelector.style.right = "1em";
+                  this.bgSelector.style.left = "";
               } else {
                   this.positionButton.style.left = "2em";
                   this.positionButton.style.right = "";
                   this.frequencySelector.style.left = "2em";
                   this.frequencySelector.style.right = "";
+                  this.colorSelector.style.left = "2em";
+                  this.colorSelector.style.right = "";
+                  this.bgSelector.style.left = "1em";
+                  this.bgSelector.style.right = "";
               }
           }
 
