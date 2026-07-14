@@ -50,6 +50,25 @@
       .soundSlider::after {
           bottom: 15%;
       }
+      .note-mark-line {
+          position: absolute;
+          left: 0;
+          width: 100%;
+          pointer-events: none;
+      }
+      .note-mark-label {
+          position: absolute;
+          left: 100%;
+          margin-left: 4px;
+          font-size: 11px;
+          font-family: sans-serif;
+          white-space: nowrap;
+          transform: translateY(-50%);
+          pointer-events: none;
+          background: rgba(255,255,255,0.75);
+          padding: 0 3px;
+          border-radius: 3px;
+      }
       .face {
           width: 190px;
           height: 190px;
@@ -164,6 +183,7 @@
               this.createUI();
               this.createFrequencyDisplay();
               this.resizeStage();
+              this.renderNoteMarks();
 
               window.addEventListener("resize", () => this.resizeStage());
               window.addEventListener("orientationchange", () => setTimeout(() => this.resizeStage(), 100));
@@ -233,6 +253,7 @@
                               this.freqMidLow = 130.81; // C3
                               break;
                       }
+                      this.renderNoteMarks();
                   });
 
                   label.appendChild(radio);
@@ -387,6 +408,51 @@
               const rel = Math.min(1, Math.max(0, (clientY - rect.top) / rect.height));
               return Math.max(this.freqMidLow, Math.min(this.freqMidHigh,
                   this.freqMidLow + ((rel - 0.06) * (this.freqMidHigh - this.freqMidLow) / 0.80)));
+          }
+
+          // ド・レ・ミ・ファ・ソ・ラ・シ・ド の位置に目印を描く
+          renderNoteMarks() {
+              // 既存の目印を削除
+              this.soundSlider.querySelectorAll('.note-mark-line, .note-mark-label').forEach(el => el.remove());
+
+              const diatonic = [
+                  { label: "ド", semitone: 0 },
+                  { label: "レ", semitone: 2 },
+                  { label: "ミ", semitone: 4 },
+                  { label: "ファ", semitone: 5 },
+                  { label: "ソ", semitone: 7 },
+                  { label: "ラ", semitone: 9 },
+                  { label: "シ", semitone: 11 }
+              ];
+
+              for (let octave = 0; octave <= 8; octave++) {
+                  diatonic.forEach(note => {
+                      const midi = 12 * (octave + 1) + note.semitone; // C4 = MIDI 60
+                      const freq = 440 * Math.pow(2, (midi - 69) / 12);
+                      if (freq < this.freqMidLow || freq > this.freqMidHigh) return;
+
+                      // calcFrequency の逆算: freq -> rel (0〜1)
+                      const rel = 0.06 + (freq - this.freqMidLow) * 0.80 / (this.freqMidHigh - this.freqMidLow);
+                      const topPercent = rel * 100;
+                      const isDo = note.label === "ド";
+
+                      const line = document.createElement('div');
+                      line.classList.add('note-mark-line');
+                      line.style.top = topPercent + "%";
+                      line.style.height = isDo ? "3px" : "1px";
+                      line.style.background = isDo ? "#FFD700" : "rgba(255,255,255,0.55)";
+                      this.soundSlider.appendChild(line);
+
+                      // 「ド」の位置にだけラベルを出す(全部だと見づらいため)
+                      if (isDo) {
+                          const label = document.createElement('div');
+                          label.classList.add('note-mark-label');
+                          label.innerText = `ド${octave}`;
+                          label.style.top = topPercent + "%";
+                          this.soundSlider.appendChild(label);
+                      }
+                  });
+              }
           }
 
           updateMirror() {
