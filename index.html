@@ -216,6 +216,9 @@
               this.updateSliderPosition(); // ここでスライダーの位置を適用
 
               this.soundSlider.addEventListener("touchstart", (e) => {
+                  if (this.context.state === "suspended") {
+                      this.context.resume();
+                  }
                   const y = e.touches[0].pageY;
                   const height = window.innerHeight || document.documentElement.clientHeight; // 修正
                   //const freq = Math.max(this.freqMidLow, Math.min(this.freqMidHigh, this.freqMidLow + (y / height * (this.freqMidHigh - this.freqMidLow))));
@@ -277,6 +280,9 @@
 
           playSin(freq) {
               if (this.snd) return;
+              if (this.context.state === "suspended") {
+                  this.context.resume();
+              }
               this.snd = this.context.createOscillator();
               this.snd.type = this.waveformType;
               this.snd.frequency.value = freq;
