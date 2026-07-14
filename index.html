@@ -377,11 +377,24 @@
 
               this.updateMirror();
 
+              // iOSでは pointerdown が「音声再生を許可するユーザー操作」として
+              // 認識されない場合があるため、touchstart でも確実に resume() する
+              this.soundSlider.addEventListener("touchstart", () => {
+                  if (this.context.state === "suspended") {
+                      this.context.resume();
+                  }
+              }, { passive: true });
+
               this.soundSlider.addEventListener("pointerdown", (e) => {
                   if (this.context.state === "suspended") {
                       this.context.resume();
                   }
-                  this.soundSlider.setPointerCapture(e.pointerId);
+                  try {
+                      this.soundSlider.setPointerCapture(e.pointerId);
+                  } catch (err) {
+                      // 一部のiOSバージョンでエラーになることがあるが、
+                      // 無視しても演奏機能自体には影響しない
+                  }
                   const freq = this.calcFrequency(e.clientY);
                   this.playSin(freq);
                   this.updateFrequencyDisplay(freq);
