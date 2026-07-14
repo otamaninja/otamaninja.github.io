@@ -460,8 +460,13 @@
                       if (isDo) {
                           const label = document.createElement('div');
                           label.classList.add('note-mark-label');
-                          label.innerText = `ド${octave}`;
+                          label.innerText = `C${octave}`;
                           label.style.top = topPercent + "%";
+                          // 舞台がミラー反転しているときは、文字だけ逆方向に反転して
+                          // 読める向きに戻す
+                          label.style.transform = this.mirrored
+                              ? "translateY(-50%) scaleX(-1)"
+                              : "translateY(-50%)";
                           this.soundSlider.appendChild(label);
                       }
                   });
@@ -470,6 +475,9 @@
 
           updateMirror() {
               this.resizeStage();
+              if (this.soundSlider) {
+                  this.renderNoteMarks();
+              }
               if (!this.mirrored) {
                   this.positionButton.style.right = "2em";
                   this.positionButton.style.left = "";
