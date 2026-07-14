@@ -15,8 +15,6 @@
           background: #CCC;
       }
 
-      /* 「舞台」: 常に 400x800 のデザインサイズで組み、
-         実際の画面サイズに合わせて JS で拡大縮小・センタリングする */
       #stage {
           position: absolute;
           width: 400px;
@@ -63,7 +61,7 @@
       }
       .tail-container {
           position: absolute;
-          top: 20px;
+          top: 520px;
           left: 10%;
           transform-origin: left center;
       }
@@ -159,7 +157,6 @@
               window.addEventListener("orientationchange", () => setTimeout(() => this.resizeStage(), 100));
           }
 
-          // 画面サイズに合わせて「舞台」を拡大縮小・センタリング(オタマトーンの形を維持)
           resizeStage() {
               const scale = Math.min(window.innerWidth / this.designW, window.innerHeight / this.designH);
               this.stage.style.left = ((window.innerWidth - this.designW) / 2) + "px";
@@ -234,10 +231,8 @@
 
               document.body.append(this.frequencySelector);
 
-              this.updateMirror(); // ボタン位置を初期状態に合わせる
+              this.updateMirror();
 
-              // pointerdown/move/up はマウス・タッチ・ペンを共通に扱えるので
-              // Windows(マウス)でも iPhone/Android(タッチ)でも同じコードで動く
               this.soundSlider.addEventListener("pointerdown", (e) => {
                   if (this.context.state === "suspended") {
                       this.context.resume();
@@ -264,7 +259,6 @@
               });
           }
 
-          // バーの実際の見た目の高さを基準に周波数を計算(拡大縮小・反転しても正しく動く)
           calcFrequency(clientY) {
               const rect = this.soundSlider.getBoundingClientRect();
               const rel = Math.min(1, Math.max(0, (clientY - rect.top) / rect.height));
@@ -272,7 +266,6 @@
                   this.freqMidLow + ((rel - 0.06) * (this.freqMidHigh - this.freqMidLow) / 0.80)));
           }
 
-          // ミラー反転(舞台全体を反転させるだけで、バー・顔・しっぽが一括で反転する)
           updateMirror() {
               this.resizeStage();
               if (!this.mirrored) {
