@@ -20,11 +20,21 @@
           --detail-color: #FFFFFF;
       }
 
+      #bg-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0);
+          pointer-events: none;
+          z-index: 1;
+          transition: background 0.3s ease;
+      }
+
       #stage {
           position: absolute;
           width: 400px;
           height: 800px;
           transform-origin: center center;
+          z-index: 2;
       }
 
       .soundSlider {
@@ -68,6 +78,36 @@
           background: rgba(255,255,255,0.75);
           padding: 0 3px;
           border-radius: 3px;
+      }
+      .practice-highlight {
+          position: absolute;
+          left: -6px;
+          width: calc(100% + 12px);
+          height: 14px;
+          margin-top: -7px;
+          background: #FF9900;
+          border-radius: 7px;
+          box-shadow: 0 0 12px 4px rgba(255, 153, 0, 0.9);
+          pointer-events: none;
+          display: none;
+          transition: top 0.12s ease-out;
+          z-index: 5;
+      }
+      .practice-note-display {
+          position: fixed;
+          top: 16px;
+          left: 50%;
+          transform: translateX(-50%);
+          font-family: sans-serif;
+          font-size: 2.2em;
+          font-weight: bold;
+          color: #333;
+          background: rgba(255, 255, 255, 0.85);
+          padding: 8px 24px;
+          border-radius: 10px;
+          display: none;
+          z-index: 20;
+          text-align: center;
       }
       .face {
           width: 190px;
@@ -143,10 +183,33 @@
           height: 30px;
           border-radius: 10px;
       }
+      .panel-title {
+          font-weight: bold;
+          margin-bottom: 4px;
+      }
+      .brand-badge {
+          position: fixed;
+          top: 6px;
+          left: 50%;
+          transform: translateX(-50%);
+          padding: 5px 16px;
+          border-radius: 999px;
+          background: linear-gradient(90deg, #6a11cb, #2575fc);
+          color: #FFFFFF;
+          font-family: sans-serif;
+          font-weight: bold;
+          font-size: 0.78em;
+          letter-spacing: 0.3px;
+          box-shadow: 0 3px 8px rgba(0,0,0,0.35);
+          white-space: nowrap;
+          z-index: 30;
+          pointer-events: none;
+      }
     </style>
   </head>
 
   <body>
+    <div id="bg-overlay"></div>
     <div id="stage">
       <div class="face" id="face">
         <div class="eyes">
@@ -164,6 +227,43 @@
     </div>
 
     <script>
+      const T = {
+          ja: {
+              toggle: "反転",
+              rangeTitle: "音域",
+              low: "低い", mid: "中", high: "高い",
+              volumeTitle: "音量",
+              colorTitle: "色",
+              black: "黒", white: "白", pink: "ピンク", blue: "青",
+              bgTitle: "背景",
+              gray: "グレー", cream: "クリーム", mint: "ミント", lavender: "ラベンダー", peach: "ピーチ",
+              photo: "写真: ",
+              clearPhoto: "写真を消す",
+              practiceTitle: "🐸 かえるのうた",
+              verySlow: "とてもゆっくり", slow: "ゆっくり", normal: "ふつう",
+              start: "▶ スタート", stop: "■ ストップ",
+              langTitle: "言語",
+              brand: "非公式アプリ OTSim・気に入ったら本物を買おう!"
+          },
+          en: {
+              toggle: "Toggle",
+              rangeTitle: "Range",
+              low: "LOW", mid: "MID", high: "HIGH",
+              volumeTitle: "Volume",
+              colorTitle: "Color",
+              black: "Black", white: "White", pink: "Pink", blue: "Blue",
+              bgTitle: "Background",
+              gray: "Gray", cream: "Cream", mint: "Mint", lavender: "Lavender", peach: "Peach",
+              photo: "Photo: ",
+              clearPhoto: "Clear photo",
+              practiceTitle: "🐸 Frog Song",
+              verySlow: "Very Slow", slow: "Slow", normal: "Normal",
+              start: "▶ Start", stop: "■ Stop",
+              langTitle: "Language",
+              brand: "Unofficial App OTSim・Like it? Get the real one!"
+          }
+      };
+
       class SoundController {
           constructor() {
               this.context = new AudioContext();
@@ -173,20 +273,41 @@
               this.freqMidHigh = 1046.50; // C5
               this.freqMidLow = 130.81; // C3
               this.mirrored = false; // false = 通常, true = 反転
+              this.lang = "ja";
               this.mouth = document.getElementById("mouth");
               this.face = document.getElementById("face");
               this.tailContainer = document.getElementById("tail-container");
               this.stage = document.getElementById("stage");
               this.designW = 400;
               this.designH = 800;
+              this.i18nRefs = []; // { el, key } のリスト。言語切替時にまとめて更新する
 
               this.createUI();
               this.createFrequencyDisplay();
               this.resizeStage();
               this.renderNoteMarks();
+              this.applyLanguage("ja");
 
               window.addEventListener("resize", () => this.resizeStage());
               window.addEventListener("orientationchange", () => setTimeout(() => this.resizeStage(), 100));
+          }
+
+          // key -> テキストを反映するelを登録しておく(言語切替時にまとめて更新)
+          registerText(el, key) {
+              this.i18nRefs.push({ el, key });
+          }
+
+          applyLanguage(lang) {
+              this.lang = lang;
+              const dict = T[lang];
+              this.i18nRefs.forEach(({ el, key }) => {
+                  el.textContent = dict[key];
+              });
+              this.updatePracticeButtonText();
+          }
+
+          updatePracticeButtonText() {
+              this.practiceButton.textContent = this.practicePlaying ? T[this.lang].stop : T[this.lang].start;
           }
 
           resizeStage() {
@@ -196,13 +317,36 @@
               this.stage.style.transform = `scale(${this.mirrored ? -scale : scale}, ${scale})`;
           }
 
+          // ラジオボタン付きラベルを作る共通ヘルパー。表示テキストは<span>にして言語切替に対応
+          makeRadioLabel(container, groupName, key, checked, onChange) {
+              const label = document.createElement('label');
+              const radio = document.createElement('input');
+              radio.type = "radio";
+              radio.name = groupName;
+              radio.checked = checked;
+              radio.addEventListener("change", onChange);
+              const span = document.createElement('span');
+              this.registerText(span, key);
+              label.appendChild(radio);
+              label.appendChild(span);
+              container.appendChild(label);
+              container.appendChild(document.createElement('br'));
+              return radio;
+          }
+
           createUI() {
               this.soundSlider = document.createElement('div');
               this.soundSlider.classList.add('soundSlider');
               this.stage.append(this.soundSlider);
 
+              // ---- ブランドバッジ ----
+              this.brandBadge = document.createElement('div');
+              this.brandBadge.classList.add('brand-badge');
+              this.registerText(this.brandBadge, "brand");
+              document.body.append(this.brandBadge);
+
+              // ---- Toggle ----
               this.positionButton = document.createElement('button');
-              this.positionButton.innerText = "Toggle";
               this.positionButton.style.position = "fixed";
               this.positionButton.style.bottom = "10px";
               this.positionButton.style.right = "2em";
@@ -215,13 +359,14 @@
               this.positionButton.style.borderRadius = "5px";
               this.positionButton.style.cursor = "pointer";
               this.positionButton.style.zIndex = "10";
+              this.registerText(this.positionButton, "toggle");
               this.positionButton.addEventListener("click", () => {
                   this.mirrored = !this.mirrored;
                   this.updateMirror();
               });
-
               document.body.append(this.positionButton);
 
+              // ---- 音域(LOW/MID/HIGH) ----
               this.frequencySelector = document.createElement('div');
               this.frequencySelector.style.position = "fixed";
               this.frequencySelector.style.bottom = "60px";
@@ -231,14 +376,13 @@
               this.frequencySelector.style.borderRadius = "5px";
               this.frequencySelector.style.zIndex = "10";
 
-              ["LOW", "MID", "HIGH"].forEach(level => {
-                  const label = document.createElement('label');
-                  const radio = document.createElement('input');
-                  radio.type = "radio";
-                  radio.name = "frequency";
-                  radio.value = level;
-                  radio.checked = level === "MID";
-                  radio.addEventListener("change", () => {
+              const rangeTitle = document.createElement('div');
+              rangeTitle.classList.add('panel-title');
+              this.registerText(rangeTitle, "rangeTitle");
+              this.frequencySelector.appendChild(rangeTitle);
+
+              [["LOW", "low"], ["MID", "mid"], ["HIGH", "high"]].forEach(([level, key]) => {
+                  this.makeRadioLabel(this.frequencySelector, "frequency", key, level === "MID", () => {
                       switch (level) {
                           case "LOW":
                               this.freqMidHigh = 261.63; // C4
@@ -255,54 +399,75 @@
                       }
                       this.renderNoteMarks();
                   });
-
-                  label.appendChild(radio);
-                  label.appendChild(document.createTextNode(level));
-                  this.frequencySelector.appendChild(label);
-                  this.frequencySelector.appendChild(document.createElement('br'));
               });
-
               document.body.append(this.frequencySelector);
 
+              // ---- 音量 ----
+              this.volume = 0.8;
+              this.volumeSelector = document.createElement('div');
+              this.volumeSelector.style.position = "fixed";
+              this.volumeSelector.style.bottom = "185px";
+              this.volumeSelector.style.right = "2em";
+              this.volumeSelector.style.backgroundColor = "rgba(255, 255, 255, 0.8)";
+              this.volumeSelector.style.padding = "10px";
+              this.volumeSelector.style.borderRadius = "5px";
+              this.volumeSelector.style.zIndex = "10";
+              this.volumeSelector.style.textAlign = "center";
+
+              const volumeLabel = document.createElement('div');
+              volumeLabel.style.fontSize = "0.8em";
+              volumeLabel.style.marginBottom = "4px";
+              this.registerText(volumeLabel, "volumeTitle");
+              this.volumeSelector.appendChild(volumeLabel);
+
+              const volumeSlider = document.createElement('input');
+              volumeSlider.type = "range";
+              volumeSlider.min = "0";
+              volumeSlider.max = "100";
+              volumeSlider.value = String(this.volume * 100);
+              volumeSlider.style.width = "6em";
+              volumeSlider.addEventListener("input", (e) => {
+                  this.volume = e.target.value / 100;
+                  if (this.gainNode && this.snd) {
+                      this.gainNode.gain.setValueAtTime(this.volume, this.context.currentTime);
+                  }
+              });
+              this.volumeSelector.appendChild(volumeSlider);
+              document.body.append(this.volumeSelector);
+
+              // ---- 色 ----
               this.colorSelector = document.createElement('div');
               this.colorSelector.style.position = "fixed";
-              this.colorSelector.style.bottom = "220px";
+              this.colorSelector.style.bottom = "290px";
               this.colorSelector.style.right = "2em";
               this.colorSelector.style.backgroundColor = "rgba(255, 255, 255, 0.8)";
               this.colorSelector.style.padding = "10px";
               this.colorSelector.style.borderRadius = "5px";
               this.colorSelector.style.zIndex = "10";
 
-              const colorOptions = [
-                  { label: "Black", body: "#000000", detail: "#FFFFFF" },
-                  { label: "White", body: "#FFFFFF", detail: "#333333" },
-                  { label: "Pink", body: "#FFD1DC", detail: "#333333" },
-                  { label: "Blue", body: "#BEE3F8", detail: "#333333" }
-              ];
+              const colorTitle = document.createElement('div');
+              colorTitle.classList.add('panel-title');
+              this.registerText(colorTitle, "colorTitle");
+              this.colorSelector.appendChild(colorTitle);
 
+              const colorOptions = [
+                  { key: "black", body: "#000000", detail: "#FFFFFF" },
+                  { key: "white", body: "#FFFFFF", detail: "#333333" },
+                  { key: "pink", body: "#FFD1DC", detail: "#333333" },
+                  { key: "blue", body: "#BEE3F8", detail: "#333333" }
+              ];
               colorOptions.forEach(opt => {
-                  const label = document.createElement('label');
-                  const radio = document.createElement('input');
-                  radio.type = "radio";
-                  radio.name = "bodyColor";
-                  radio.value = opt.label;
-                  radio.checked = opt.label === "Black";
-                  radio.addEventListener("change", () => {
+                  this.makeRadioLabel(this.colorSelector, "bodyColor", opt.key, opt.key === "black", () => {
                       document.body.style.setProperty("--body-color", opt.body);
                       document.body.style.setProperty("--detail-color", opt.detail);
                   });
-
-                  label.appendChild(radio);
-                  label.appendChild(document.createTextNode(opt.label));
-                  this.colorSelector.appendChild(label);
-                  this.colorSelector.appendChild(document.createElement('br'));
               });
-
               document.body.append(this.colorSelector);
 
+              // ---- 背景 ----
               this.bgSelector = document.createElement('div');
               this.bgSelector.style.position = "fixed";
-              this.bgSelector.style.top = "10px";
+              this.bgSelector.style.top = "42px";
               this.bgSelector.style.right = "1em";
               this.bgSelector.style.backgroundColor = "rgba(255, 255, 255, 0.8)";
               this.bgSelector.style.padding = "10px";
@@ -311,41 +476,31 @@
               this.bgSelector.style.maxWidth = "9em";
 
               const bgTitle = document.createElement('div');
-              bgTitle.innerText = "Background";
-              bgTitle.style.fontWeight = "bold";
-              bgTitle.style.marginBottom = "4px";
+              bgTitle.classList.add('panel-title');
+              this.registerText(bgTitle, "bgTitle");
               this.bgSelector.appendChild(bgTitle);
 
               const bgColorOptions = [
-                  { label: "Gray", color: "#CCCCCC" },
-                  { label: "Cream", color: "#FDF6E3" },
-                  { label: "Mint", color: "#E0F5E9" },
-                  { label: "Lavender", color: "#EDE7F6" },
-                  { label: "Peach", color: "#FFE8DC" }
+                  { key: "gray", color: "#CCCCCC" },
+                  { key: "cream", color: "#FDF6E3" },
+                  { key: "mint", color: "#E0F5E9" },
+                  { key: "lavender", color: "#EDE7F6" },
+                  { key: "peach", color: "#FFE8DC" }
               ];
-
               bgColorOptions.forEach(opt => {
-                  const label = document.createElement('label');
-                  const radio = document.createElement('input');
-                  radio.type = "radio";
-                  radio.name = "bgColor";
-                  radio.value = opt.label;
-                  radio.checked = opt.label === "Gray";
-                  radio.addEventListener("change", () => {
+                  this.makeRadioLabel(this.bgSelector, "bgColor", opt.key, opt.key === "gray", () => {
                       document.body.style.backgroundImage = "";
                       document.body.style.backgroundColor = opt.color;
+                      document.getElementById('bg-overlay').style.background = "rgba(0, 0, 0, 0)";
                   });
-
-                  label.appendChild(radio);
-                  label.appendChild(document.createTextNode(opt.label));
-                  this.bgSelector.appendChild(label);
-                  this.bgSelector.appendChild(document.createElement('br'));
               });
 
               const bgImageLabel = document.createElement('label');
-              bgImageLabel.innerText = "Photo: ";
               bgImageLabel.style.display = "block";
               bgImageLabel.style.marginTop = "6px";
+              const photoSpan = document.createElement('span');
+              this.registerText(photoSpan, "photo");
+              bgImageLabel.appendChild(photoSpan);
               const bgImageInput = document.createElement('input');
               bgImageInput.type = "file";
               bgImageInput.accept = "image/*";
@@ -356,24 +511,106 @@
                   if (file) {
                       const url = URL.createObjectURL(file);
                       document.body.style.backgroundImage = `url("${url}")`;
-                      console.log("Background image set:", url);
+                      document.getElementById('bg-overlay').style.background = "rgba(255, 255, 255, 0.6)";
                   }
               });
               bgImageLabel.appendChild(bgImageInput);
               this.bgSelector.appendChild(bgImageLabel);
 
               const bgClearButton = document.createElement('button');
-              bgClearButton.innerText = "Clear photo";
               bgClearButton.style.marginTop = "6px";
               bgClearButton.style.fontSize = "0.7em";
               bgClearButton.style.width = "100%";
+              this.registerText(bgClearButton, "clearPhoto");
               bgClearButton.addEventListener("click", () => {
                   document.body.style.backgroundImage = "";
                   bgImageInput.value = "";
+                  document.getElementById('bg-overlay').style.background = "rgba(0, 0, 0, 0)";
               });
               this.bgSelector.appendChild(bgClearButton);
-
               document.body.append(this.bgSelector);
+
+              // ---- 言語切替 ----
+              this.langSelector = document.createElement('div');
+              this.langSelector.style.position = "fixed";
+              this.langSelector.style.bottom = "10px";
+              this.langSelector.style.left = "1em";
+              this.langSelector.style.backgroundColor = "rgba(255, 255, 255, 0.85)";
+              this.langSelector.style.padding = "8px 10px";
+              this.langSelector.style.borderRadius = "5px";
+              this.langSelector.style.zIndex = "20";
+              this.langSelector.style.textAlign = "center";
+
+              const langTitle = document.createElement('div');
+              langTitle.classList.add('panel-title');
+              langTitle.style.fontSize = "0.75em";
+              this.registerText(langTitle, "langTitle");
+              this.langSelector.appendChild(langTitle);
+
+              [["ja", "日本語"], ["en", "English"]].forEach(([code, display]) => {
+                  const label = document.createElement('label');
+                  label.style.marginRight = "8px";
+                  const radio = document.createElement('input');
+                  radio.type = "radio";
+                  radio.name = "lang";
+                  radio.checked = code === "ja";
+                  radio.addEventListener("change", () => this.applyLanguage(code));
+                  label.appendChild(radio);
+                  label.appendChild(document.createTextNode(display));
+                  this.langSelector.appendChild(label);
+              });
+              document.body.append(this.langSelector);
+
+              // ---- かえるのうた練習モード ----
+              this.practicePanel = document.createElement('div');
+              this.practicePanel.style.position = "fixed";
+              this.practicePanel.style.top = "70px";
+              this.practicePanel.style.left = "1em";
+              this.practicePanel.style.backgroundColor = "rgba(255, 255, 255, 0.85)";
+              this.practicePanel.style.padding = "10px";
+              this.practicePanel.style.borderRadius = "5px";
+              this.practicePanel.style.zIndex = "10";
+              this.practicePanel.style.maxWidth = "10em";
+
+              const practiceTitle = document.createElement('div');
+              practiceTitle.classList.add('panel-title');
+              this.registerText(practiceTitle, "practiceTitle");
+              this.practicePanel.appendChild(practiceTitle);
+
+              this.practiceSpeed = 2000; // ms/音符(とてもゆっくり=初期値、シニア向け)
+              [["verySlow", 2000], ["slow", 900], ["normal", 550]].forEach(([key, ms], i) => {
+                  this.makeRadioLabel(this.practicePanel, "practiceSpeed", key, i === 0, () => {
+                      this.practiceSpeed = ms;
+                  });
+              });
+
+              this.practiceButton = document.createElement('button');
+              this.practiceButton.style.marginTop = "6px";
+              this.practiceButton.style.width = "100%";
+              this.practiceButton.style.padding = "6px";
+              this.practiceButton.style.fontSize = "0.9em";
+              this.practiceButton.style.backgroundColor = "#4CAF50";
+              this.practiceButton.style.color = "#FFF";
+              this.practiceButton.style.border = "none";
+              this.practiceButton.style.borderRadius = "5px";
+              this.practiceButton.style.cursor = "pointer";
+              this.practiceButton.addEventListener("click", () => {
+                  if (this.practicePlaying) {
+                      this.stopKaeruSong();
+                  } else {
+                      this.startKaeruSong();
+                  }
+              });
+              this.practicePanel.appendChild(this.practiceButton);
+              document.body.append(this.practicePanel);
+
+              this.practiceHighlight = document.createElement('div');
+              this.practiceHighlight.classList.add('practice-highlight');
+              this.soundSlider.appendChild(this.practiceHighlight);
+
+              this.practiceNoteDisplay = document.createElement('div');
+              this.practiceNoteDisplay.classList.add('practice-note-display');
+              document.body.appendChild(this.practiceNoteDisplay);
 
               this.updateMirror();
 
@@ -416,16 +653,84 @@
               });
           }
 
+          // 音名+オクターブ から周波数を計算(C4=261.63Hzが基準)
+          noteFreq(letter, octave) {
+              const semitone = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[letter];
+              const midi = 12 * (octave + 1) + semitone;
+              return 440 * Math.pow(2, (midi - 69) / 12);
+          }
+
+          // 「かえるの合唱」(ドイツ民謡)の正しい音階。全てオクターブ4の範囲に収まります
+          getKaeruSequence() {
+              const soundJP = { C: "ド", D: "レ", E: "ミ", F: "ファ", G: "ソ", A: "ラ", B: "シ" };
+              const seq = [
+                  ['C', 4], ['D', 4], ['E', 4], ['F', 4], ['E', 4], ['D', 4], ['C', 4],
+                  ['E', 4], ['F', 4], ['G', 4], ['A', 4], ['G', 4], ['F', 4], ['E', 4],
+                  ['C', 4], ['C', 4], ['C', 4], ['C', 4],
+                  ['C', 4], ['C', 4], ['D', 4], ['D', 4], ['E', 4], ['E', 4], ['F', 4], ['F', 4],
+                  ['E', 4], ['D', 4], ['C', 4]
+              ];
+              return seq.map(([letter, octave]) => ({
+                  freq: this.noteFreq(letter, octave),
+                  label: `${soundJP[letter]} (${letter}${octave})`
+              }));
+          }
+
+          startKaeruSong() {
+              this.freqMidHigh = 1046.50;
+              this.freqMidLow = 130.81;
+              document.querySelectorAll('input[name="frequency"]').forEach((r, i) => {
+                  r.checked = (i === 1); // MID
+              });
+              this.renderNoteMarks();
+
+              this.kaeruSequence = this.getKaeruSequence();
+              this.kaeruIndex = 0;
+              this.practicePlaying = true;
+              this.updatePracticeButtonText();
+              this.practiceButton.style.backgroundColor = "#FF6347";
+              this.practiceHighlight.style.display = "block";
+              this.practiceNoteDisplay.style.display = "block";
+              this.stepKaeruSong();
+          }
+
+          stepKaeruSong() {
+              if (!this.practicePlaying) return;
+              if (this.kaeruIndex >= this.kaeruSequence.length) {
+                  this.stopKaeruSong();
+                  return;
+              }
+              const note = this.kaeruSequence[this.kaeruIndex];
+              const normP = Math.sqrt(Math.max(0, (note.freq - this.freqMidLow) / (this.freqMidHigh - this.freqMidLow)));
+              const rel = 0.06 + normP * 0.80;
+              this.practiceHighlight.style.top = (rel * 100) + "%";
+              this.practiceNoteDisplay.innerText = note.label;
+
+              this.kaeruIndex++;
+              this.practiceTimer = setTimeout(() => this.stepKaeruSong(), this.practiceSpeed);
+          }
+
+          stopKaeruSong() {
+              this.practicePlaying = false;
+              if (this.practiceTimer) clearTimeout(this.practiceTimer);
+              this.updatePracticeButtonText();
+              this.practiceButton.style.backgroundColor = "#4CAF50";
+              this.practiceHighlight.style.display = "none";
+              this.practiceNoteDisplay.style.display = "none";
+          }
+
           calcFrequency(clientY) {
               const rect = this.soundSlider.getBoundingClientRect();
               const rel = Math.min(1, Math.max(0, (clientY - rect.top) / rect.height));
-              return Math.max(this.freqMidLow, Math.min(this.freqMidHigh,
-                  this.freqMidLow + ((rel - 0.06) * (this.freqMidHigh - this.freqMidLow) / 0.80)));
+              // 0(上)〜1(下) に正規化してから、二乗のカーブをかける。
+              // これにより上(低音側)は大まか、下(高音側)は細かい配分になる
+              const normP = Math.min(1, Math.max(0, (rel - 0.06) / 0.80));
+              const curved = normP * normP;
+              return this.freqMidLow + curved * (this.freqMidHigh - this.freqMidLow);
           }
 
           // ド・レ・ミ・ファ・ソ・ラ・シ・ド の位置に目印を描く
           renderNoteMarks() {
-              // 既存の目印を削除
               this.soundSlider.querySelectorAll('.note-mark-line, .note-mark-label').forEach(el => el.remove());
 
               const diatonic = [
@@ -440,12 +745,13 @@
 
               for (let octave = 0; octave <= 8; octave++) {
                   diatonic.forEach(note => {
-                      const midi = 12 * (octave + 1) + note.semitone; // C4 = MIDI 60
+                      const midi = 12 * (octave + 1) + note.semitone;
                       const freq = 440 * Math.pow(2, (midi - 69) / 12);
                       if (freq < this.freqMidLow || freq > this.freqMidHigh) return;
 
-                      // calcFrequency の逆算: freq -> rel (0〜1)
-                      const rel = 0.06 + (freq - this.freqMidLow) * 0.80 / (this.freqMidHigh - this.freqMidLow);
+                      // calcFrequency の逆算(二乗カーブの逆=平方根)
+                      const normP = Math.sqrt(Math.max(0, (freq - this.freqMidLow) / (this.freqMidHigh - this.freqMidLow)));
+                      const rel = 0.06 + normP * 0.80;
                       const topPercent = rel * 100;
                       const isDo = note.label === "ド";
 
@@ -456,14 +762,11 @@
                       line.style.background = isDo ? "#FFD700" : "rgba(255,255,255,0.55)";
                       this.soundSlider.appendChild(line);
 
-                      // 「ド」の位置にだけラベルを出す(全部だと見づらいため)
                       if (isDo) {
                           const label = document.createElement('div');
                           label.classList.add('note-mark-label');
                           label.innerText = `C${octave}`;
                           label.style.top = topPercent + "%";
-                          // 舞台がミラー反転しているときは、文字だけ逆方向に反転して
-                          // 読める向きに戻す
                           label.style.transform = this.mirrored
                               ? "translateY(-50%) scaleX(-1)"
                               : "translateY(-50%)";
@@ -483,6 +786,8 @@
                   this.positionButton.style.left = "";
                   this.frequencySelector.style.right = "2em";
                   this.frequencySelector.style.left = "";
+                  this.volumeSelector.style.right = "2em";
+                  this.volumeSelector.style.left = "";
                   this.colorSelector.style.right = "2em";
                   this.colorSelector.style.left = "";
                   this.bgSelector.style.right = "1em";
@@ -492,10 +797,30 @@
                   this.positionButton.style.right = "";
                   this.frequencySelector.style.left = "2em";
                   this.frequencySelector.style.right = "";
+                  this.volumeSelector.style.left = "2em";
+                  this.volumeSelector.style.right = "";
                   this.colorSelector.style.left = "2em";
                   this.colorSelector.style.right = "";
                   this.bgSelector.style.left = "1em";
                   this.bgSelector.style.right = "";
+              }
+              if (this.practicePanel) {
+                  if (!this.mirrored) {
+                      this.practicePanel.style.left = "1em";
+                      this.practicePanel.style.right = "";
+                  } else {
+                      this.practicePanel.style.right = "1em";
+                      this.practicePanel.style.left = "";
+                  }
+              }
+              if (this.langSelector) {
+                  if (!this.mirrored) {
+                      this.langSelector.style.left = "1em";
+                      this.langSelector.style.right = "";
+                  } else {
+                      this.langSelector.style.right = "1em";
+                      this.langSelector.style.left = "";
+                  }
               }
           }
 
@@ -524,7 +849,7 @@
               this.snd.frequency.value = freq;
 
               this.gainNode = this.context.createGain();
-              this.gainNode.gain.setValueAtTime(1, this.context.currentTime);
+              this.gainNode.gain.setValueAtTime(this.volume, this.context.currentTime);
               this.gainNode.connect(this.context.destination);
 
               this.snd.connect(this.gainNode);
@@ -534,7 +859,7 @@
 
           stopSin() {
               if (this.snd && this.context) {
-                  this.gainNode.gain.setValueAtTime(1, this.context.currentTime);
+                  this.gainNode.gain.setValueAtTime(this.volume, this.context.currentTime);
                   this.gainNode.gain.linearRampToValueAtTime(0, this.context.currentTime + 0.3);
                   const removedSnd = this.snd;
                   this.snd = null;
