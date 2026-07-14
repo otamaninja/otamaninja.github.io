@@ -288,8 +288,8 @@
               this.renderNoteMarks();
               this.applyLanguage("ja");
 
-              window.addEventListener("resize", () => this.resizeStage());
-              window.addEventListener("orientationchange", () => setTimeout(() => this.resizeStage(), 100));
+              window.addEventListener("resize", () => this.updateMirror());
+              window.addEventListener("orientationchange", () => setTimeout(() => this.updateMirror(), 100));
           }
 
           // key -> テキストを反映するelを登録しておく(言語切替時にまとめて更新)
@@ -804,21 +804,27 @@
                   this.bgSelector.style.left = "1em";
                   this.bgSelector.style.right = "";
               }
+
+              // バーの実際の描画幅を計算し、その分だけパネルをバーから離す
+              // (バーとパネルは常に同じ側に来る配置になっているため)
+              const scale = Math.min(window.innerWidth / this.designW, window.innerHeight / this.designH);
+              const barClearance = Math.ceil(56 * scale) + 24;
+
               if (this.practicePanel) {
                   if (!this.mirrored) {
-                      this.practicePanel.style.left = "1em";
+                      this.practicePanel.style.left = barClearance + "px";
                       this.practicePanel.style.right = "";
                   } else {
-                      this.practicePanel.style.right = "1em";
+                      this.practicePanel.style.right = barClearance + "px";
                       this.practicePanel.style.left = "";
                   }
               }
               if (this.langSelector) {
                   if (!this.mirrored) {
-                      this.langSelector.style.left = "1em";
+                      this.langSelector.style.left = barClearance + "px";
                       this.langSelector.style.right = "";
                   } else {
-                      this.langSelector.style.right = "1em";
+                      this.langSelector.style.right = barClearance + "px";
                       this.langSelector.style.left = "";
                   }
               }
