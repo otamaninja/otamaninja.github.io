@@ -127,6 +127,28 @@
           z-index: 20;
           cursor: pointer;
       }
+      .countdown-display {
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          font-family: sans-serif;
+          font-size: 7em;
+          font-weight: 900;
+          color: #FFD700;
+          text-shadow: 0 0 24px rgba(255, 215, 0, 0.85), 0 4px 14px rgba(0, 0, 0, 0.6);
+          z-index: 50;
+          display: none;
+          pointer-events: none;
+      }
+      @keyframes countdownPop {
+          0% { transform: translate(-50%, -50%) scale(0.3); opacity: 0; }
+          55% { transform: translate(-50%, -50%) scale(1.25); opacity: 1; }
+          100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+      }
+      .countdown-pop {
+          animation: countdownPop 0.6s ease-out;
+      }
       .face {
           width: 190px;
           height: 190px;
@@ -333,10 +355,16 @@
               gray: "グレー", cream: "クリーム", mint: "ミント", lavender: "ラベンダー", peach: "ピーチ",
               photo: "写真: ",
               clearPhoto: "写真を消す",
-              practiceTitle: "🐸 かえるのうた",
+              practiceTitle: "🎵 曲の練習",
+              songLabel: "曲",
+              songKaeru: "🐸 かえるのうた",
+              songTwinkle: "⭐ きらきら星",
+              songFurusato: "🏔️ ふるさと",
               verySlow: "とてもゆっくり", slow: "ゆっくり", normal: "ふつう",
               start: "▶ スタート", stop: "■ ストップ", stopFloating: "■ ストップ",
               langTitle: "言語",
+              debugTitle: "デバッグ",
+              showFreqDisplay: "Hz表示を出す",
               brand: "非公式アプリ OTSim・気に入ったら本物を買おう!"
           },
           en: {
@@ -352,10 +380,16 @@
               gray: "Gray", cream: "Cream", mint: "Mint", lavender: "Lavender", peach: "Peach",
               photo: "Photo: ",
               clearPhoto: "Clear photo",
-              practiceTitle: "🐸 Frog Song",
+              practiceTitle: "🎵 Song Practice",
+              songLabel: "Song",
+              songKaeru: "🐸 Frog Song",
+              songTwinkle: "⭐ Twinkle Twinkle",
+              songFurusato: "🏔️ Furusato",
               verySlow: "Very Slow", slow: "Slow", normal: "Normal",
               start: "▶ Start", stop: "■ Stop", stopFloating: "■ Stop",
               langTitle: "Language",
+              debugTitle: "Debug",
+              showFreqDisplay: "Show Hz display",
               brand: "Unofficial App OTSim・Like it? Get the real one!"
           }
       };
@@ -625,8 +659,42 @@
                   langSection.appendChild(label);
               });
 
-              // ---- かえるのうた練習モード ----
+              // ---- デバッグ表示 ----
+              this.showFreqDebug = false; // 初期値はOFF
+              const debugSection = this.addSection("debugTitle");
+              const debugLabel = document.createElement('label');
+              const debugCheckbox = document.createElement('input');
+              debugCheckbox.type = "checkbox";
+              debugCheckbox.checked = false;
+              debugCheckbox.addEventListener("change", (e) => {
+                  this.showFreqDebug = e.target.checked;
+                  if (!this.showFreqDebug) {
+                      this.freqDisplay.style.visibility = "hidden";
+                  }
+              });
+              const debugSpan = document.createElement('span');
+              this.registerText(debugSpan, "showFreqDisplay");
+              debugLabel.appendChild(debugCheckbox);
+              debugLabel.appendChild(debugSpan);
+              debugSection.appendChild(debugLabel);
+
+              // ---- 曲の練習モード ----
               const practiceSection = this.addSection("practiceTitle");
+
+              this.selectedSong = "kaeru";
+              const songSubLabel = document.createElement('div');
+              songSubLabel.style.fontSize = "0.85em";
+              songSubLabel.style.marginBottom = "4px";
+              this.registerText(songSubLabel, "songLabel");
+              practiceSection.appendChild(songSubLabel);
+
+              [["kaeru", "songKaeru"], ["twinkle", "songTwinkle"], ["furusato", "songFurusato"]].forEach(([songKey, labelKey], i) => {
+                  this.makeRadioLabel(practiceSection, "songChoice", labelKey, i === 0, () => {
+                      this.selectedSong = songKey;
+                  });
+              });
+              practiceSection.appendChild(document.createElement('br'));
+
               this.practiceSpeed = 2000; // ms/音符(とてもゆっくり=初期値、シニア向け)
               [["verySlow", 2000], ["slow", 900], ["normal", 550]].forEach(([key, ms], i) => {
                   this.makeRadioLabel(practiceSection, "practiceSpeed", key, i === 0, () => {
@@ -649,8 +717,8 @@
                   if (this.practicePlaying) {
                       this.stopKaeruSong();
                   } else {
-                      this.startKaeruSong();
                       closeSettings(); // スタートしたら設定を閉じてバーを見やすくする
+                      this.runCountdownThenStart();
                   }
               });
               practiceSection.appendChild(this.practiceButton);
@@ -668,6 +736,10 @@
               this.registerText(this.practiceStopButton, "stopFloating");
               this.practiceStopButton.addEventListener("click", () => this.stopKaeruSong());
               document.body.appendChild(this.practiceStopButton);
+
+              this.countdownDisplay = document.createElement('div');
+              this.countdownDisplay.classList.add('countdown-display');
+              document.body.appendChild(this.countdownDisplay);
 
               this.updateMirror();
 
@@ -733,13 +805,72 @@
               }));
           }
 
+          // 「きらきら星」("Ah! vous dirai-je, Maman" のメロディ)
+          getTwinkleSequence(baseOctave = 4) {
+              const soundJP = { C: "ド", D: "レ", E: "ミ", F: "ファ", G: "ソ", A: "ラ", B: "シ" };
+              const notes = [
+                  'C', 'C', 'G', 'G', 'A', 'A', 'G',
+                  'F', 'F', 'E', 'E', 'D', 'D', 'C',
+                  'G', 'G', 'F', 'F', 'E', 'E', 'D',
+                  'G', 'G', 'F', 'F', 'E', 'E', 'D',
+                  'C', 'C', 'G', 'G', 'A', 'A', 'G',
+                  'F', 'F', 'E', 'E', 'D', 'D', 'C'
+              ];
+              return notes.map(letter => ({
+                  freq: this.noteFreq(letter, baseOctave),
+                  label: `${soundJP[letter]} (${letter}${baseOctave})`
+              }));
+          }
+
+          getSongSequence(baseOctave) {
+              if (this.selectedSong === "twinkle") return this.getTwinkleSequence(baseOctave);
+              if (this.selectedSong === "furusato") return null; // 別処理(下記参照)
+              return this.getKaeruSequence(baseOctave);
+          }
+
+          // 「ふるさと」(文部省唱歌)。実際の楽譜画像をピクセル解析して測定した階名です。
+          // 1オクターブを超える音域(D4〜E5)のため、他の曲とは違い「移調シフト」で音域に合わせます
+          getFurusatoSequence(shift = 0) {
+              const soundJP = { C: "ド", D: "レ", E: "ミ", F: "ファ", G: "ソ", A: "ラ", B: "シ" };
+              const seq = [
+                  ['B', 4], ['G', 4], ['G', 4], ['G', 4], ['A', 4], ['B', 4], ['A', 4], ['B', 4], ['B', 4], ['C', 5],
+                  ['C', 5], ['D', 5], ['E', 5], ['B', 4], ['C', 5], ['B', 4], ['A', 4], ['A', 4], ['F', 4],
+                  ['A', 4], ['G', 4], ['A', 4], ['D', 4], ['G', 4], ['A', 4], ['B', 4], ['B', 4], ['C', 5], ['B', 4], ['C', 5], ['E', 5], ['D', 5], ['C', 5], ['B', 4],
+                  ['D', 5], ['D', 5], ['D', 5], ['G', 4], ['A', 4], ['B', 4], ['C', 5], ['C', 5], ['A', 4]
+              ];
+              return seq.map(([letter, octave]) => ({
+                  freq: this.noteFreq(letter, octave + shift),
+                  label: `${soundJP[letter]} (${letter}${octave + shift})`
+              }));
+          }
+
+          async runCountdownThenStart() {
+              const counts = ["3", "2", "1"];
+              this.countdownDisplay.style.display = "block";
+              for (const c of counts) {
+                  this.countdownDisplay.textContent = c;
+                  this.countdownDisplay.classList.remove('countdown-pop');
+                  void this.countdownDisplay.offsetWidth; // アニメーションを再生させるためのリフロー
+                  this.countdownDisplay.classList.add('countdown-pop');
+                  await new Promise(resolve => setTimeout(resolve, 700));
+              }
+              this.countdownDisplay.style.display = "none";
+              this.startKaeruSong();
+          }
+
           startKaeruSong() {
               // 現在選ばれている音域(LOW/MID/HIGH)に収まるオクターブを選ぶ
               const radios = Array.from(document.querySelectorAll('input[name="frequency"]'));
               const checkedIndex = radios.findIndex(r => r.checked);
-              const baseOctave = checkedIndex === 0 ? 3 : checkedIndex === 2 ? 5 : 4; // 0=LOW→3, 1=MID→4, 2=HIGH→5
 
-              this.kaeruSequence = this.getKaeruSequence(baseOctave);
+              if (this.selectedSong === "furusato") {
+                  // ふるさとは1オクターブを超えるため、シフト量で調整(LOW=-2, MID=0, HIGH=+1)
+                  const shift = checkedIndex === 0 ? -2 : checkedIndex === 2 ? 1 : 0;
+                  this.kaeruSequence = this.getFurusatoSequence(shift);
+              } else {
+                  const baseOctave = checkedIndex === 0 ? 3 : checkedIndex === 2 ? 5 : 4; // 0=LOW→3, 1=MID→4, 2=HIGH→5
+                  this.kaeruSequence = this.getSongSequence(baseOctave);
+              }
               this.kaeruIndex = 0;
               this.practicePlaying = true;
               this.updatePracticeButtonText();
@@ -902,6 +1033,7 @@
           }
 
           updateFrequencyDisplay(freq) {
+              if (!this.showFreqDebug) return;
               this.freqDisplay.innerText = `Freq: ${freq.toFixed(0)} Hz`;
               this.freqDisplay.style.visibility = "visible";
           }
