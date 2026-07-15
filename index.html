@@ -109,6 +109,24 @@
           z-index: 20;
           text-align: center;
       }
+      .practice-stop-button {
+          position: fixed;
+          top: 108px;
+          left: 50%;
+          transform: translateX(-50%);
+          font-family: sans-serif;
+          font-size: 1em;
+          font-weight: bold;
+          color: #FFF;
+          background: #FF6347;
+          border: none;
+          padding: 8px 20px;
+          border-radius: 999px;
+          box-shadow: 0 3px 8px rgba(0,0,0,0.35);
+          display: none;
+          z-index: 20;
+          cursor: pointer;
+      }
       .face {
           width: 190px;
           height: 190px;
@@ -317,7 +335,7 @@
               clearPhoto: "写真を消す",
               practiceTitle: "🐸 かえるのうた",
               verySlow: "とてもゆっくり", slow: "ゆっくり", normal: "ふつう",
-              start: "▶ スタート", stop: "■ ストップ",
+              start: "▶ スタート", stop: "■ ストップ", stopFloating: "■ ストップ",
               langTitle: "言語",
               brand: "非公式アプリ OTSim・気に入ったら本物を買おう!"
           },
@@ -336,7 +354,7 @@
               clearPhoto: "Clear photo",
               practiceTitle: "🐸 Frog Song",
               verySlow: "Very Slow", slow: "Slow", normal: "Normal",
-              start: "▶ Start", stop: "■ Stop",
+              start: "▶ Start", stop: "■ Stop", stopFloating: "■ Stop",
               langTitle: "Language",
               brand: "Unofficial App OTSim・Like it? Get the real one!"
           }
@@ -645,6 +663,12 @@
               this.practiceNoteDisplay.classList.add('practice-note-display');
               document.body.appendChild(this.practiceNoteDisplay);
 
+              this.practiceStopButton = document.createElement('button');
+              this.practiceStopButton.classList.add('practice-stop-button');
+              this.registerText(this.practiceStopButton, "stopFloating");
+              this.practiceStopButton.addEventListener("click", () => this.stopKaeruSong());
+              document.body.appendChild(this.practiceStopButton);
+
               this.updateMirror();
 
               // iOSでは pointerdown が「音声再生を許可するユーザー操作」として
@@ -692,36 +716,37 @@
               return 440 * Math.pow(2, (midi - 69) / 12);
           }
 
-          getKaeruSequence() {
+          // 「かえるの合唱」(ドイツ民謡)の正しい音階。baseOctave を変えることで
+          // LOW/MID/HIGH のどの音域が選ばれていても、その範囲に収まるように移調できる
+          getKaeruSequence(baseOctave = 4) {
               const soundJP = { C: "ド", D: "レ", E: "ミ", F: "ファ", G: "ソ", A: "ラ", B: "シ" };
-              const seq = [
-                  ['C', 4], ['D', 4], ['E', 4], ['F', 4], ['E', 4], ['D', 4], ['C', 4],
-                  ['E', 4], ['F', 4], ['G', 4], ['A', 4], ['G', 4], ['F', 4], ['E', 4],
-                  ['C', 4], ['C', 4], ['C', 4], ['C', 4],
-                  ['C', 4], ['C', 4], ['D', 4], ['D', 4], ['E', 4], ['E', 4], ['F', 4], ['F', 4],
-                  ['E', 4], ['D', 4], ['C', 4]
+              const notes = [
+                  'C', 'D', 'E', 'F', 'E', 'D', 'C',
+                  'E', 'F', 'G', 'A', 'G', 'F', 'E',
+                  'C', 'C', 'C', 'C',
+                  'C', 'C', 'D', 'D', 'E', 'E', 'F', 'F',
+                  'E', 'D', 'C'
               ];
-              return seq.map(([letter, octave]) => ({
-                  freq: this.noteFreq(letter, octave),
-                  label: `${soundJP[letter]} (${letter}${octave})`
+              return notes.map(letter => ({
+                  freq: this.noteFreq(letter, baseOctave),
+                  label: `${soundJP[letter]} (${letter}${baseOctave})`
               }));
           }
 
           startKaeruSong() {
-              this.freqMidHigh = 1046.50;
-              this.freqMidLow = 130.81;
-              document.querySelectorAll('input[name="frequency"]').forEach((r, i) => {
-                  r.checked = (i === 1); // MID
-              });
-              this.renderNoteMarks();
+              // 現在選ばれている音域(LOW/MID/HIGH)に収まるオクターブを選ぶ
+              const radios = Array.from(document.querySelectorAll('input[name="frequency"]'));
+              const checkedIndex = radios.findIndex(r => r.checked);
+              const baseOctave = checkedIndex === 0 ? 3 : checkedIndex === 2 ? 5 : 4; // 0=LOW→3, 1=MID→4, 2=HIGH→5
 
-              this.kaeruSequence = this.getKaeruSequence();
+              this.kaeruSequence = this.getKaeruSequence(baseOctave);
               this.kaeruIndex = 0;
               this.practicePlaying = true;
               this.updatePracticeButtonText();
               this.practiceButton.style.backgroundColor = "#FF6347";
               this.practiceHighlight.style.display = "block";
               this.practiceNoteDisplay.style.display = "block";
+              this.practiceStopButton.style.display = "block";
               this.stepKaeruSong();
           }
 
@@ -748,6 +773,7 @@
               this.practiceButton.style.backgroundColor = "#4CAF50";
               this.practiceHighlight.style.display = "none";
               this.practiceNoteDisplay.style.display = "none";
+              this.practiceStopButton.style.display = "none";
           }
 
           calcFrequency(clientY) {
